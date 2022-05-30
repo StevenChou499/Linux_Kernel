@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
     uint64_t end = get_time();
 
-    printf("Total runtime : %ldms\n", end - start);
+    // printf("Total runtime : %ldms\n", end - start);
     
     // print_buf_to_file(in, )
 
