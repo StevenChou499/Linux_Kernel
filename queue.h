@@ -201,6 +201,7 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
 
     // Read message body
     memcpy(buffer, &q->buffer[q->head + sizeof(message_t)], m.len);
+    printf("%ld ", (size_t) *(size_t *)buffer);
 
     // Consume the message by incrementing the read pointer
     q->head += m.len + sizeof(message_t);

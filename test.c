@@ -8,11 +8,6 @@
 #define NUM_THREADS (8)
 #define MESSAGES_PER_THREAD (getpagesize() * 2)
 
-/*struct target {
-    pthread_t thread;
-    uint8_t buffer[8192];
-};*/
-
 /**
  * @brief Get timestamp
  * @return timestamp now
@@ -31,7 +26,7 @@ static void *consumer_loop(void *arg)
     for (size_t i = 0; i < MESSAGES_PER_THREAD; i++) {
         size_t x;
         queue_get(q, (uint8_t *) &x, sizeof(size_t));
-        printf("%ld ", x);
+        // printf("%ld ", x);
         count++;
     }
     return (void *) count;
@@ -46,27 +41,8 @@ static void *publisher_loop(void *arg)
     return (void *) i;
 }
 
-/**
- * @brief Prints a buffer to a file
- * @param f file descriptor
- * @param buf Pointer to the buffer
- * @param size Size of buffer
- */
-void print_buf_to_file(FILE *f, uint8_t *buf, size_t size)
-{
-    for(size_t i = 0; i < size; i += 3){
-        if(i % 900 == 0)
-            fprintf(f, "\n");
-        
-        fprintf(f, buf[i]);
-    }
-}
-
 int main(int argc, char *argv[])
 {
-    FILE *in = fopen("in.txt", "w");
-    FILE *out = fopen("out.txt", "w");
-
     queue_t q;
     queue_init(&q, BUFFER_SIZE);
 
@@ -85,20 +61,18 @@ int main(int argc, char *argv[])
 
     intptr_t sent;
     pthread_join(publisher, (void **) &sent);
-    printf("publisher sent %ld messages\n", sent);
 
     intptr_t recd[NUM_THREADS];
-    for (intptr_t i = 0; i < NUM_THREADS; i++) {
+    for (intptr_t i = 0; i < NUM_THREADS; i++)
         pthread_join(consumers[i], (void **) &recd[i]);
+
+    uint64_t end = get_time();
+    printf("\npublisher sent %ld messages\n", sent);
+    for (intptr_t i = 0; i < NUM_THREADS; i++) {
         printf("consumer %ld received %ld messages\n", i, recd[i]);
     }
 
-    uint64_t end = get_time();
-
-    // printf("Total runtime : %ldms\n", end - start);
-    
-    // print_buf_to_file(in, )
-
+    printf("Total runtime : %ldms\n", end - start);
 
     pthread_attr_destroy(&attr);
 

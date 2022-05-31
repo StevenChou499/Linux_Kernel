@@ -3,7 +3,8 @@ CFILE = $(NAME).c
 
 check:
 	@gcc $(CFILE) -o $(NAME) -lpthread
-	@./$(NAME)
+	@./$(NAME) > output
+	@python3 ./verify.py
 
 clean:
-	@rm $(NAME)
+	@rm $(NAME) output
