@@ -16,4 +16,7 @@ total = int(result_split[-1]) + 1
 for i in range(0, total):
     # print('i =', i, ', result_split[', i, '] =', result_split[i], '\n')
     if(int(i) != int(result_split[i])):
-        print('failed\n')
+        print('%s failed\n' % str(i))
+        print('output: %s' % str(result_split[i]))
+        print('expected: %s' % str(i))
+        exit()
