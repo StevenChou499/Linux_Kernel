@@ -1,7 +1,5 @@
-expect = []
 result = []
 result_split = []
-dics = []
 
 with open('output', 'r') as f:
     tmp = f.readline()
