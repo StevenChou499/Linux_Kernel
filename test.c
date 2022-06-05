@@ -8,6 +8,13 @@
 #define NUM_THREADS (8)
 #define MESSAGES_PER_THREAD (getpagesize() * 2)
 
+typedef struct ringbuf {
+    queue_t q;
+    size_t msg_per_thd;
+    size_t num_of_thd;
+    // size_t buf_size;
+} ringbuf_t;
+
 /**
  * @brief Get timestamp
  * @return timestamp now
@@ -21,11 +28,12 @@ uint64_t get_time()
 
 static void *consumer_loop(void *arg)
 {
-    queue_t *q = (queue_t *) arg;
+    ringbuf_t *r = (ringbuf_t *) arg;
     size_t count = 0;
-    for (size_t i = 0; i < MESSAGES_PER_THREAD; i++) {
+    size_t message_per_thread = r->msg_per_thd;
+    for (size_t i = 0; i < message_per_thread; i++) {
         size_t x;
-        queue_get(q, (uint8_t *) &x, sizeof(size_t));
+        queue_get(&r->q, (uint8_t *) &x, sizeof(size_t));
         // printf("%ld ", x);
         count++;
     }
@@ -34,49 +42,54 @@ static void *consumer_loop(void *arg)
 
 static void *publisher_loop(void *arg)
 {
-    queue_t *q = (queue_t *) arg;
+    ringbuf_t *r = (ringbuf_t *) arg;
     size_t i;
-    for (i = 0; i < NUM_THREADS * MESSAGES_PER_THREAD; i++)
-        queue_put(q, (uint8_t *) &i, sizeof(size_t));
+    size_t message_per_thread = r->msg_per_thd;
+    size_t num_threads = r->num_of_thd;
+    for (i = 0; i < num_threads * message_per_thread; i++)
+        queue_put(&r->q, (uint8_t *) &i, sizeof(size_t));
     return (void *) i;
 }
 
 int main(int argc, char *argv[])
 {
-    queue_t q;
-    queue_init(&q, BUFFER_SIZE);
+    // queue_t q;
+    ringbuf_t r;
+    queue_init(&r.q, BUFFER_SIZE);
+    r.num_of_thd = 128;
+    r.msg_per_thd = MESSAGES_PER_THREAD;
 
     uint64_t start = get_time();
 
     pthread_t publisher;
-    pthread_t consumers[NUM_THREADS];
+    pthread_t consumers[r.num_of_thd];
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    pthread_create(&publisher, &attr, &publisher_loop, (void *) &q);
+    pthread_create(&publisher, &attr, &publisher_loop, (void *) &r);
 
-    for (intptr_t i = 0; i < NUM_THREADS; i++)
-        pthread_create(&consumers[i], &attr, &consumer_loop, (void *) &q);
+    for (intptr_t i = 0; i < r.num_of_thd; i++)
+        pthread_create(&consumers[i], &attr, &consumer_loop, (void *) &r);
 
     intptr_t sent;
     pthread_join(publisher, (void **) &sent);
 
-    intptr_t recd[NUM_THREADS];
-    for (intptr_t i = 0; i < NUM_THREADS; i++)
+    intptr_t recd[r.num_of_thd];
+    for (intptr_t i = 0; i < r.num_of_thd; i++)
         pthread_join(consumers[i], (void **) &recd[i]);
 
     uint64_t end = get_time();
     printf("\npublisher sent %ld messages\n", sent);
-    for (intptr_t i = 0; i < NUM_THREADS; i++) {
+    for (intptr_t i = 0; i < r.num_of_thd; i++) {
         printf("consumer %ld received %ld messages\n", i, recd[i]);
     }
 
-    printf("Total runtime : %ldms\n", end - start);
+    printf("Total runtime : %ldus\n", end - start);
 
     pthread_attr_destroy(&attr);
 
-    queue_destroy(&q);
+    queue_destroy(&r.q);
 
     return 0;
 }
