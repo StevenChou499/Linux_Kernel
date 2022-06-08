@@ -40,12 +40,14 @@ void queue_destroy(queue_t *q)
  * @brief insert the elements in @buffer to queue
  * 
  * @param q pointer to the queue itself
- * @param buffer 
- * @param size 
+ * @param buffer pointer to the buffer inserting to queue
+ * @param size size of the buffer
  */
 void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 {
-
+    for(size_t i = 0; i < size; i++){
+        q->buffer[i] = buffer[i];
+    }
 }
 
 
