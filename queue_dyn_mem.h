@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
 
 typedef struct {
     // representing buffer and its size
@@ -45,9 +47,15 @@ void queue_destroy(queue_t *q)
  */
 void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 {
-    for(size_t i = 0; i < size; i++){
-        q->buffer[i] = buffer[i];
-    }
+    memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
+    q->tail += size;
+}
+
+size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
+{
+    memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
+    q->head += max;
+    return max;
 }
 
 
