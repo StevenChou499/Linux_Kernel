@@ -49,12 +49,14 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 {
     memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
     q->tail += size;
+    q->tail %= q->size;
 }
 
 size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
 {
     memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
     q->head += max;
+    q->head %= q->size;
     return max;
 }
 
