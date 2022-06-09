@@ -81,7 +81,7 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
     q->head %= q->size;
 
     pthread_cond_signal(&q->writeable);
-    pthread_cond_wait(&q->readable, &q->lock);
+    pthread_mutex_unlock(&q->lock);
 
     return max;
 }
