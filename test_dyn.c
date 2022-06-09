@@ -22,6 +22,7 @@ static void *consumer_loop(void *arg)
         size_t x;
         queue_get(q, (uint8_t *) &x, sizeof(size_t));
         count++;
+        printf("%ld\n", x);
     }
     return (void *) count;
 }
