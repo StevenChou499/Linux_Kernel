@@ -27,26 +27,43 @@ typedef struct {
  */
 void queue_init(queue_t *q, size_t s)
 {
+    // allocate a specific amount of memory for ring buffer
     q->buffer = (uint8_t *)malloc(sizeof(uint8_t) * s);
+    if(!q->buffer) {
+        fprintf(stderr, "queue error: Couldn't allocate memory!\n");
+        abort();
+    }
+
+    // Initialize synchronization primitives
+    if (pthread_mutex_init(&q->lock, NULL) != 0)
+        fprintf(stderr, "Could not initialize mutex");
+    if (pthread_cond_init(&q->readable, NULL) != 0)
+        fprintf(stderr, "Could not initialize condition variable");
+    if (pthread_cond_init(&q->writeable, NULL) != 0)
+        fprintf(stderr, "Could not initialize condition variable");
+    
+    // Initiallize buffer size and indices
     q->size = s;
     q->head = q->tail = 0;
-
-    pthread_mutex_init(&q->lock, NULL);
-    pthread_cond_init(&q->readable, NULL);
-    pthread_cond_init(&q->writeable, NULL);
 }
 
 /**
  * @brief free the allocated memory in queue
+ * and destroy mutex and condition variables
  * 
  * @param q pointer to the queue itself
  */
 void queue_destroy(queue_t *q)
 {
     free(q->buffer);
-    pthread_mutex_destroy(&q->lock);
-    pthread_cond_destroy(&q->readable);
-    pthread_cond_destroy(&q->writeable);
+    if (pthread_mutex_destroy(&q->lock) != 0)
+        fprintf(stderr, "Could not destroy mutex");
+
+    if (pthread_cond_destroy(&q->readable) != 0)
+        fprintf(stderr, "Could not destroy condition variable");
+
+    if (pthread_cond_destroy(&q->writeable) != 0)
+        fprintf(stderr, "Could not destroy condition variable");
 }
 
 /**
@@ -72,6 +89,14 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
     pthread_mutex_unlock(&q->lock);
 }
 
+/**
+ * @brief duplicate the content into the ring buffer
+ * 
+ * @param q pointer to the queue itself
+ * @param buffer pointer to the duplicated content
+ * @param max the size of duplicated content
+ * @return size_t 
+ */
 size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
 {
     pthread_mutex_lock(&q->lock);

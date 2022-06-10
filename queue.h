@@ -15,12 +15,6 @@ typedef struct {
     // read / write indices
     size_t head, tail;
 
-    // sequence number of next consumable message
-    size_t head_seq;
-
-    // sequence number of last written message
-    size_t tail_seq;
-
     // synchronization primitives
     pthread_cond_t readable, writeable;
     pthread_mutex_t lock;
@@ -36,11 +30,6 @@ typedef struct {
 
 #include <sys/mman.h>
 #include <sys/types.h>
-
-/* Metadata (header) for a message in the queue */
-typedef struct {
-    size_t len, seq;
-} message_t;
 
 /* Convenience wrappers for erroring out */
 static inline void queue_error(const char *fmt, ...)
@@ -115,7 +104,6 @@ void queue_init(queue_t *q, size_t s)
     // Initialize remaining members
     q->size = s;
     q->head = q->tail = 0;
-    q->head_seq = q->tail_seq = 0;
 }
 
 /** Destroy the blocking queue *q* */
@@ -149,18 +137,14 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
     pthread_mutex_lock(&q->lock);
 
     // Wait for space to become available
-    while ((q->size - (q->tail - q->head)) < (size + sizeof(message_t)))
+    while ((q->size - (q->tail - q->head)) < (size + sizeof(size_t)))
         pthread_cond_wait(&q->writeable, &q->lock);
 
-    // Construct header
-    message_t m = {.len = size, .seq = q->tail_seq++};
-
     // Write message
-    memcpy(&q->buffer[q->tail], &m, sizeof(message_t));
-    memcpy(&q->buffer[q->tail + sizeof(message_t)], buffer, size);
+    memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
 
     // Increment write index
-    q->tail += size + sizeof(message_t);
+    q->tail += size;
 
     pthread_cond_signal(&q->readable);
     pthread_mutex_unlock(&q->lock);
@@ -168,8 +152,6 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 
 /** Retrieves a message of at most *max* bytes from queue *q* and writes
  * it to *buffer*.
- *
- * Blocks until a message of no more than *max* bytes is available.
  *
  * Returns the number of bytes in the written message.
  */
@@ -179,33 +161,15 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
 
     // Wait for a message that we can successfully consume to reach the front of
     // the queue
-    message_t m;
-    for (;;) {
-        // Wait for a message to arrive
-        while ((q->tail - q->head) == 0)
-            pthread_cond_wait(&q->readable, &q->lock);
-
-        // Read message header
-        memcpy(&m, &q->buffer[q->head], sizeof(message_t));
-
-        // Message too long, wait for someone else to consume it
-        if (m.len > max) {
-            while (q->head_seq == m.seq)
-                pthread_cond_wait(&q->writeable, &q->lock);
-            continue;
-        }
-
-        // We successfully consumed the header of a suitable message, so proceed
-        break;
-    }
+    while ((q->tail - q->head) == 0)
+        pthread_cond_wait(&q->readable, &q->lock);
 
     // Read message body
-    memcpy(buffer, &q->buffer[q->head + sizeof(message_t)], m.len);
-    printf("%ld ", (size_t) *(size_t *)buffer);
+    memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
+    // printf("%ld\n", (size_t) *(size_t *)buffer);
 
     // Consume the message by incrementing the read pointer
-    q->head += m.len + sizeof(message_t);
-    q->head_seq++;
+    q->head += max;
 
     // When read buffer moves into 2nd memory region, we can reset to the 1st
     // region
@@ -216,7 +180,7 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
     pthread_cond_signal(&q->writeable);
     pthread_mutex_unlock(&q->lock);
 
-    return m.len;
+    return max;
 }
 
 #endif

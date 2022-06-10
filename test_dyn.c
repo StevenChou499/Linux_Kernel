@@ -5,29 +5,6 @@
 
 #include "queue_dyn_mem.h"
 
-static void *publisher_loop(void *arg)
-{
-    queue_t *q = (queue_t *) arg;
-    size_t i;
-    for (i = 0; i < 8192; i++)
-        queue_put(q, (uint8_t *) &i, sizeof(size_t));
-    
-    return (void *) i;
-}
-
-static void *consumer_loop(void *arg)
-{
-    queue_t *q = (queue_t *) arg;
-    size_t count = 0;
-    for (size_t i = 0; i < 8192; i++) {
-        size_t x;
-        queue_get(q, (uint8_t *) &x, sizeof(size_t));
-        count++;
-        printf("%ld\n", x);
-    }
-    return (void *) count;
-}
-
 /**
  * @brief Get timestamp
  * @return timestamp now
@@ -37,6 +14,29 @@ uint64_t get_time()
     struct timespec ts;
     clock_gettime(0, &ts);
     return (uint64_t)(ts.tv_sec * 1e6 + ts.tv_nsec / 1e3);
+}
+
+static void *publisher_loop(void *arg)
+{
+    queue_t *q = (queue_t *) arg;
+    size_t i;
+    for (i = 0; i < 65536; i++)
+        queue_put(q, (uint8_t *) &i, sizeof(size_t));
+    
+    return (void *) i;
+}
+
+static void *consumer_loop(void *arg)
+{
+    queue_t *q = (queue_t *) arg;
+    size_t count = 0;
+    for (size_t i = 0; i < 65536; i++) {
+        size_t x;
+        queue_get(q, (uint8_t *) &x, sizeof(size_t));
+        count++;
+        printf("%ld\n", x);
+    }
+    return (void *) count;
 }
 
 int main()

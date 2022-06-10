@@ -5,15 +5,8 @@
 #include "queue.h"
 
 #define BUFFER_SIZE (getpagesize())
-#define NUM_THREADS (8)
+#define NUM_THREADS (1)
 #define MESSAGES_PER_THREAD (getpagesize() * 2)
-
-typedef struct ringbuf {
-    queue_t q;
-    size_t msg_per_thd;
-    size_t num_of_thd;
-    // size_t buf_size;
-} ringbuf_t;
 
 /**
  * @brief Get timestamp
@@ -28,13 +21,12 @@ uint64_t get_time()
 
 static void *consumer_loop(void *arg)
 {
-    ringbuf_t *r = (ringbuf_t *) arg;
+    queue_t *q = (queue_t *) arg;
     size_t count = 0;
-    size_t message_per_thread = r->msg_per_thd;
-    for (size_t i = 0; i < message_per_thread; i++) {
+    for (size_t i = 0; i < 65536; i++) {
         size_t x;
-        queue_get(&r->q, (uint8_t *) &x, sizeof(size_t));
-        // printf("%ld ", x);
+        queue_get(q, (uint8_t *) &x, sizeof(size_t));
+        printf("%ld\n", x);
         count++;
     }
     return (void *) count;
@@ -42,54 +34,45 @@ static void *consumer_loop(void *arg)
 
 static void *publisher_loop(void *arg)
 {
-    ringbuf_t *r = (ringbuf_t *) arg;
+    queue_t *q = (queue_t *) arg;
     size_t i;
-    size_t message_per_thread = r->msg_per_thd;
-    size_t num_threads = r->num_of_thd;
-    for (i = 0; i < num_threads * message_per_thread; i++)
-        queue_put(&r->q, (uint8_t *) &i, sizeof(size_t));
+    for (i = 0; i < 65536; i++)
+        queue_put(q, (uint8_t *) &i, sizeof(size_t));
     return (void *) i;
 }
 
 int main(int argc, char *argv[])
 {
-    // queue_t q;
-    ringbuf_t r;
-    queue_init(&r.q, BUFFER_SIZE);
-    r.num_of_thd = 1;
-    r.msg_per_thd = MESSAGES_PER_THREAD;
+    queue_t q;
+    queue_init(&q, BUFFER_SIZE);
 
     uint64_t start = get_time();
 
     pthread_t publisher;
-    pthread_t consumers[r.num_of_thd];
+    pthread_t consumer;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    pthread_create(&publisher, &attr, &publisher_loop, (void *) &r);
+    pthread_create(&publisher, &attr, &publisher_loop, (void *) &q);
 
-    for (intptr_t i = 0; i < r.num_of_thd; i++)
-        pthread_create(&consumers[i], &attr, &consumer_loop, (void *) &r);
+    pthread_create(&consumer, &attr, &consumer_loop, (void *) &q);
 
     intptr_t sent;
     pthread_join(publisher, (void **) &sent);
 
-    intptr_t recd[r.num_of_thd];
-    for (intptr_t i = 0; i < r.num_of_thd; i++)
-        pthread_join(consumers[i], (void **) &recd[i]);
+    intptr_t recd;
+    pthread_join(consumer, (void **) &recd);
 
     uint64_t end = get_time();
     printf("\npublisher sent %ld messages\n", sent);
-    for (intptr_t i = 0; i < r.num_of_thd; i++) {
-        printf("consumer %ld received %ld messages\n", i, recd[i]);
-    }
+    printf("consumer received %ld messages\n", recd);
 
-    printf("Total runtime : %ldus\n", end - start);
+    printf("\nTotal runtime : %ldus\n", end - start);
 
     pthread_attr_destroy(&attr);
 
-    queue_destroy(&r.q);
+    queue_destroy(&q);
 
     return 0;
 }
