@@ -40,10 +40,10 @@ int main()
 
     pthread_create(&publisher, &attr, &publisher_loop, (void *) &q);
     intptr_t sent;
-    pthread_join(publisher, (void **) &sent);
-
     pthread_create(&consumer, &attr, &consumer_loop, (void *) &q);
     intptr_t recd;
+    
+    pthread_join(publisher, (void **) &sent);
     pthread_join(consumer, (void **) &recd);
 
     printf("\npublisher sent %ld messages\n", sent);

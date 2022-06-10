@@ -86,5 +86,4 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
     return max;
 }
 
-
 #endif
