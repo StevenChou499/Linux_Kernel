@@ -30,7 +30,7 @@ static void *consumer_loop(void *arg)
 int main()
 {
     queue_t q;
-    queue_init(&q, getpagesize());
+    queue_init(&q, (size_t) 4096);
 
     pthread_t publisher;
     pthread_t consumer;

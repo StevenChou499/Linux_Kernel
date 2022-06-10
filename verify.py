@@ -1,7 +1,7 @@
 result = []
 result_split = []
 
-with open('output', 'r') as f:
+with open('valid.txt', 'r') as f:
     tmp = f.readline()
     while (tmp):
         result.append(tmp)

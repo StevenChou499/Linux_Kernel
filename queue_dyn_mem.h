@@ -59,10 +59,12 @@ void queue_destroy(queue_t *q)
 void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 {
     pthread_mutex_lock(&q->lock);
-    while ((q->size - (q->tail - q->head)) < (size + sizeof(size_t)))
+
+    while ((q->tail + sizeof(size)) % q->size == q->head)
         pthread_cond_wait(&q->writeable, &q->lock);
 
     memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
+     // printf("put : %ld\n", *(size_t *) buffer);
     q->tail += size;
     q->tail %= q->size;
 
@@ -73,10 +75,12 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
 size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
 {
     pthread_mutex_lock(&q->lock);
+
     while ((q->tail - q->head) == 0)
         pthread_cond_wait(&q->readable, &q->lock);
 
     memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
+    // printf("get : %ld\n", *(size_t *) buffer);
     q->head += max;
     q->head %= q->size;
 
