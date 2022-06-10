@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     // queue_t q;
     ringbuf_t r;
     queue_init(&r.q, BUFFER_SIZE);
-    r.num_of_thd = 128;
+    r.num_of_thd = 1;
     r.msg_per_thd = MESSAGES_PER_THREAD;
 
     uint64_t start = get_time();
