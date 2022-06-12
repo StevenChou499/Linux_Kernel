@@ -1,5 +1,5 @@
 set title "ring buffer speed"
-set xlabel "Number of messages (Hund.)"
+set xlabel "Number of messages (x10^2)"
 set ylabel "time(usec)"
 set terminal png font " Times_New_Roman,12 "
 set output "Compare.png"
