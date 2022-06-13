@@ -4,7 +4,7 @@
 
 #include <unistd.h>
 
-#include "queue_dyn_mem.h"
+#include "queue_dyn.h"
 
 #define BUFFER_SIZE (getpagesize())
 
