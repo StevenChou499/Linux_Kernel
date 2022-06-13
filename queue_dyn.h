@@ -1,5 +1,5 @@
-#ifndef queue_dyn_mem_h_
-#define queue_dyn_mem_h_
+#ifndef queue_dyn_h_
+#define queue_dyn_h_
 
 #include <stdint.h>
 #include <stdlib.h>
