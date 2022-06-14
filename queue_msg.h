@@ -144,7 +144,7 @@ void queue_put(queue_t *q, uint8_t **buffer, size_t size)
     memcpy(&q->buffer[q->tail], *buffer, size);
     // printf("%ld\n", (size_t) **(size_t **)buffer);
 
-    // Increment write index
+    // Increment write index and buffer index
     q->tail += size;
     *buffer += size;
 

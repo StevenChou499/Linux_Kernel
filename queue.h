@@ -132,7 +132,7 @@ void queue_destroy(queue_t *q)
  *
  * Blocks until sufficient space is available in the queue.
  */
-void queue_put(queue_t *q, uint8_t *buffer, size_t size)
+void queue_put(queue_t *q, uint8_t **buffer, size_t size)
 {
     pthread_mutex_lock(&q->lock);
 
@@ -141,10 +141,11 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
         pthread_cond_wait(&q->writeable, &q->lock);
 
     // Write message
-    memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
+    memcpy(&q->buffer[q->tail], *buffer, sizeof(size_t));
 
     // Increment write index
     q->tail += size;
+    *buffer += size;
 
     pthread_cond_signal(&q->readable);
     pthread_mutex_unlock(&q->lock);
@@ -155,7 +156,7 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
  *
  * Returns the number of bytes in the written message.
  */
-size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
+size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 {
     pthread_mutex_lock(&q->lock);
 
@@ -165,11 +166,12 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
         pthread_cond_wait(&q->readable, &q->lock);
 
     // Read message body
-    memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
+    memcpy(*buffer, &q->buffer[q->head], sizeof(size_t));
     // printf("%ld\n", (size_t) *(size_t *)buffer);
 
     // Consume the message by incrementing the read pointer
-    q->head += max;
+    q->head += size;
+    *buffer += size;
 
     // When read buffer moves into 2nd memory region, we can reset to the 1st
     // region
@@ -180,7 +182,7 @@ size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
     pthread_cond_signal(&q->writeable);
     pthread_mutex_unlock(&q->lock);
 
-    return max;
+    return size;
 }
 
 #endif

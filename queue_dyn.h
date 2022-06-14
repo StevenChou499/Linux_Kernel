@@ -73,16 +73,17 @@ void queue_destroy(queue_t *q)
  * @param buffer pointer to the buffer inserting to queue
  * @param size size of the buffer
  */
-void queue_put(queue_t *q, uint8_t *buffer, size_t size)
+void queue_put(queue_t *q, uint8_t **buffer, size_t size)
 {
     pthread_mutex_lock(&q->lock);
 
-    while ((q->tail + sizeof(size)) % q->size == q->head)
+    while ((q->tail + size) % q->size == q->head)
         pthread_cond_wait(&q->writeable, &q->lock);
 
-    memcpy(&q->buffer[q->tail], buffer, sizeof(size_t));
+    memcpy(&q->buffer[q->tail], *buffer, size);
      // printf("put : %ld\n", *(size_t *) buffer);
     q->tail += size;
+    *buffer += size;
     q->tail %= q->size;
 
     pthread_cond_signal(&q->readable);
@@ -97,22 +98,23 @@ void queue_put(queue_t *q, uint8_t *buffer, size_t size)
  * @param max the size of duplicated content
  * @return size_t 
  */
-size_t queue_get(queue_t *q, uint8_t *buffer, size_t max)
+size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 {
     pthread_mutex_lock(&q->lock);
 
     while ((q->tail - q->head) == 0)
         pthread_cond_wait(&q->readable, &q->lock);
 
-    memcpy(buffer, &q->buffer[q->head], sizeof(size_t));
+    memcpy(*buffer, &q->buffer[q->head], size);
     // printf("get : %ld\n", *(size_t *) buffer);
-    q->head += max;
+    q->head += size;
+    *buffer += size;
     q->head %= q->size;
 
     pthread_cond_signal(&q->writeable);
     pthread_mutex_unlock(&q->lock);
 
-    return max;
+    return size;
 }
 
 #endif
