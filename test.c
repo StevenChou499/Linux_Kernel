@@ -26,6 +26,9 @@ typedef struct {
     uint32_t num_threads;
 } rbuf_t;
 
+size_t in[65536];
+size_t out[65536];
+
 /**
  * @brief Get timestamp
  * @return timestamp now
@@ -41,8 +44,10 @@ static void *publisher_loop(void *arg)
 {
     rbuf_t *r = (rbuf_t *) arg;
     size_t i;
+    size_t **publisher_ptr = malloc(sizeof(size_t *));
+    *publisher_ptr = in;
     for (i = 0; i < r->messages_per_thread * r->num_threads; i++)
-        queue_put(&r->q, (uint8_t *) &i, sizeof(size_t));
+        queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t));
     return (void *) i;
 }
 
@@ -50,8 +55,10 @@ static void *consumer_loop(void *arg)
 {
     rbuf_t *r = (rbuf_t *) arg;
     size_t i;
+    size_t **consumer_ptr = malloc(sizeof(size_t *));
+    *consumer_ptr = out;
     for (i = 0; i < r->messages_per_thread; i++) {
-        queue_get(&r->q, (uint8_t *) &i, sizeof(size_t));
+        queue_get(&r->q, (uint8_t **) consumer_ptr, sizeof(size_t));
         // printf("%ld\n", x);
     }
     return (void *) i;
@@ -61,13 +68,18 @@ int main(int argc, char *argv[])
 {
     uint32_t time[100];
     for (int i = 0; i < 100; i++) {
+        for(size_t i = 0; i < 65536UL; i++) {
+            in[i] = i;
+            out[i] = 0UL;
+        }
+
         rbuf_t r;
         r.num_threads = 1U;
         if (argc > 1)
             r.messages_per_thread = (uint32_t) atoi(argv[1]);
         else
             r.messages_per_thread = 65536;
-        // r.messages_per_thread = (uint32_t) atoi(argv[1]);
+        
         queue_init(&r.q, BUFFER_SIZE);
 
         uint64_t start = get_time();
@@ -99,8 +111,11 @@ int main(int argc, char *argv[])
         queue_destroy(&r.q);
     }
 
+    // for(size_t i = 0; i < 65536UL; i++)
+    //     printf("%ld\n", out[i]);
+
     qsort(time, 100U, sizeof(uint32_t), comp);
-    long long avg = 0LL;
+    long long avg = 0UL;
     for (int num = 16; num < 84; num++) {
         avg += time[num];
     }
