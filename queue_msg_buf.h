@@ -62,7 +62,7 @@ void queue_init(queue_t *q, size_t s)
      * through the entire buffer.
      */
 
-    size_t mmap_size;
+    size_t mmap_size = s;
 
     // Check that the requested size is a multiple of a page. If it isn't, we're
     // in trouble.
@@ -73,6 +73,8 @@ void queue_init(queue_t *q, size_t s)
         size_t double_size = 2 * s;
         mmap_size = (double_size - 1 + getpagesize()) / getpagesize() * getpagesize();
     }
+
+    printf("mmap_size = %lu\n", mmap_size);
 
     // Create an anonymous file backed by memory
     if ((q->fd = memfd_create("queue_region", 0)) == -1)
