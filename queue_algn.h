@@ -1,5 +1,5 @@
-#ifndef queue_msg_buf_h_
-#define queue_msg_buf_h
+#ifndef queue_algn_h_
+#define queue_algn_h
 
 #include <pthread.h>
 #include <stdint.h>
@@ -62,19 +62,16 @@ void queue_init(queue_t *q, size_t s)
      * through the entire buffer.
      */
 
-    size_t mmap_size = s;
+    size_t real_mmap_size = ((s - 1 + getpagesize()) / getpagesize()) * getpagesize();
 
     // Check that the requested size is a multiple of a page. If it isn't, we're
     // in trouble.
     if (s % getpagesize() != 0) {
         fprintf(stderr, 
-            "Requested size (%lu) is not a multiple of the page size (%d)", s,
+            "Requested size (%lu) is not a multiple of the page size (%d),\n", s,
             getpagesize());
-        size_t double_size = 2 * s;
-        mmap_size = (double_size - 1 + getpagesize()) / getpagesize() * getpagesize();
+        fprintf(stderr, "Changing to %lu bytes.\n", real_mmap_size);
     }
-
-    printf("mmap_size = %lu\n", mmap_size);
 
     // Create an anonymous file backed by memory
     if ((q->fd = memfd_create("queue_region", 0)) == -1)
@@ -85,19 +82,19 @@ void queue_init(queue_t *q, size_t s)
         queue_error_errno("Could not set size of anonymous file");
 
     // Ask mmap for a good address
-    if ((q->buffer = mmap(NULL, mmap_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS,
+    if ((q->buffer = mmap(NULL, real_mmap_size * 2, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS,
                           -1, 0)) == MAP_FAILED)
         queue_error_errno("Could not allocate virtual memory");
 
     // Mmap first region
-    if (mmap(q->buffer, s, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED,
+    if (mmap(q->buffer, real_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED,
              q->fd, 0) == MAP_FAILED)
-        queue_error_errno("Could not map buffer into virtual memory");
+        queue_error_errno("Could not map buffer into first virtual memory");
 
     // Mmap second region, with exact address
-    if (mmap(q->buffer + s, s, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED,
+    if (mmap(q->buffer + real_mmap_size, real_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED,
              q->fd, 0) == MAP_FAILED)
-        queue_error_errno("Could not map buffer into virtual memory");
+        queue_error_errno("Could not map buffer into second virtual memory");
 
     // Initialize synchronization primitives
     if (pthread_mutex_init(&q->lock, NULL) != 0)
@@ -108,7 +105,7 @@ void queue_init(queue_t *q, size_t s)
         queue_error_errno("Could not initialize condition variable");
 
     // Initialize remaining members
-    q->size = s;
+    q->size = real_mmap_size;
     q->head = q->tail = 0;
 }
 

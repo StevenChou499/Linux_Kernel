@@ -3,7 +3,7 @@
 #include <time.h>
 #include <string.h>
 
-#include "queue_msg_buf.h"
+#include "queue_algn.h"
 
 #define BUFFER_SIZE (getpagesize())
 #define NUM_THREADS (1)
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     else
         r.messages_per_thread = 65536;
     
-    queue_init(&r.q, BUFFER_SIZE);
+    queue_init(&r.q, 4000);
 
     pthread_t publisher_th;
     pthread_t consumer_th;
@@ -93,7 +93,11 @@ int main(int argc, char *argv[])
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
+    printf("Start publisher thread...\n");
+
     pthread_create(&publisher_th, &attr, &publisher_loop, (void *) &r);
+
+    printf("Start consumer thread...\n");
 
     pthread_create(&consumer_th, &attr, &consumer_loop, (void *) &r);
 
@@ -113,8 +117,8 @@ int main(int argc, char *argv[])
 
     queue_destroy(&r.q);
 
-    for(size_t i = 0; i < 65536; i++)
-        printf("%ld\n", out[i]);
+    /*for(size_t i = 0; i < 65536; i++)
+        printf("%ld\n", out[i]);*/
 
     return 0;
 }
