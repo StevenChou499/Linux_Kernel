@@ -169,6 +169,7 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
     while ((q->tail - q->head) == 0)
         pthread_cond_wait(&q->readable, &q->lock);
 
+    // sleep(1);
     // Read message body
     memcpy(*buffer, &q->buffer[q->head], size);
     // printf("%ld\n", (size_t) *(size_t *)buffer);

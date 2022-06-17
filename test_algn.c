@@ -73,52 +73,93 @@ static void *consumer_loop(void *arg)
 
 int main(int argc, char *argv[])
 {
-    for(size_t i = 0; i < 65536ULL; i++) {
-        in[i] = i;
-        out[i] = 0ULL;
-    }
+    // uint32_t time[100];
+    // for (int i = 0; i < 100; i++) {
+        for (size_t i = 0; i < 65536ULL; i++) {
+            in[i] = i;
+            out[i] = 0ULL;
+        }
 
-    rbuf_t r;
-    r.num_threads = 1U;
-    if (argc > 1)
-        r.messages_per_thread = (uint32_t) atoi(argv[1]);
-    else
-        r.messages_per_thread = 65536;
+        rbuf_t r;
+        r.num_threads = 1U;
+        r.messages_per_thread = 65536U;
+        size_t buffer_size = BUFFER_SIZE;
+
+        /* In order to customize messages per thread and the buffer size, 
+         * we use argv to recieve arguments. For specific number of messages, 
+         * add 'm' at the front of the argument, for specific buffer size, add 
+         * 'b' at the front of the argument.
+         */
+        if (argc > 2) {
+            if (argv[1][0] == 'm') {
+                r.messages_per_thread = (uint32_t) atoi(argv[1] + 1);
+                buffer_size = (uint64_t) atoi(argv[2] + 1);
+            }
+            if (argv[1][0] == 'b') {
+                buffer_size = (uint64_t) atoi(argv[1] + 1);
+                r.messages_per_thread = (uint32_t) atoi(argv[2] + 1);
+            }
+        }
+
+        if (argc > 1) {
+            if (argv[1][0] == 'm')
+                r.messages_per_thread = (uint32_t) atoi(argv[1] + 1);
+            if (argv[1][0] == 'b')
+                buffer_size = (uint64_t) atoi(argv[1] + 1);
+        }
+
+        // printf("r.message_per_thread is %u\n", r.messages_per_thread);
+        // printf("buffer_size is %lu\n", buffer_size);
     
-    queue_init(&r.q, 4000);
+        queue_init(&r.q, buffer_size);
 
-    pthread_t publisher_th;
-    pthread_t consumer_th;
+        uint64_t start = get_time();
 
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
+        pthread_t publisher_th;
+        pthread_t consumer_th;
 
-    printf("Start publisher thread...\n");
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
 
-    pthread_create(&publisher_th, &attr, &publisher_loop, (void *) &r);
+        // printf("Starting publisher thread...\n");
 
-    printf("Start consumer thread...\n");
+        pthread_create(&publisher_th, &attr, &publisher_loop, (void *) &r);
 
-    pthread_create(&consumer_th, &attr, &consumer_loop, (void *) &r);
+        // printf("Starting consumer thread...\n");
 
-    intptr_t sent;
-    pthread_join(publisher_th, (void **) &sent);
+        pthread_create(&consumer_th, &attr, &consumer_loop, (void *) &r);
 
-    intptr_t recd;
-    pthread_join(consumer_th, (void **) &recd);
+        intptr_t sent;
+        pthread_join(publisher_th, (void **) &sent);
 
-    // for(size_t i = 0ULL; i < r.messages_per_thread; i++)
-        // printf("%lu\n", out[i]);
+        intptr_t recd;
+        pthread_join(consumer_th, (void **) &recd);
+    
+        uint64_t end = get_time();
+        // time[i] = end - start;
 
-    // printf("\npublisher sent %ld messages\n", sent);
-    // printf("consumer received %ld messages\n", recd);
+        // for(size_t i = 0ULL; i < r.messages_per_thread; i++)
+        //     printf("%lu\n", out[i]);
 
-    pthread_attr_destroy(&attr);
+        // printf("\npublisher sent %ld messages\n", sent);
+        // printf("consumer received %ld messages\n", recd);
 
-    queue_destroy(&r.q);
+        pthread_attr_destroy(&attr);
 
+        queue_destroy(&r.q);
+    // }
+    
     /*for(size_t i = 0; i < 65536; i++)
         printf("%ld\n", out[i]);*/
+
+    // qsort(time, 100U, sizeof(uint32_t), comp);
+    // long long avg = 0LL;
+    // for (int num = 16; num < 84; num++) {
+    //     avg += time[num];
+    // }
+    // avg /= 68;
+    // // printf("average time : %lldus\n", avg);
+    // printf("%lld\n", avg);
 
     return 0;
 }
