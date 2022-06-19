@@ -49,6 +49,7 @@ static void *publisher_loop(void *arg)
     *publisher_ptr = in;
     size_t full_put = (r->messages_per_thread * r->num_threads) / SIZE_OF_MESSAGE;
     size_t remain_put = (r->messages_per_thread * r->num_threads) % SIZE_OF_MESSAGE;
+    // printf("full_put = %lu\n", full_put);
     for (i = 0; i < full_put; i++)
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     if(remain_put)
@@ -73,8 +74,9 @@ static void *consumer_loop(void *arg)
 
 int main(int argc, char *argv[])
 {
-    // uint32_t time[100];
-    // for (int i = 0; i < 100; i++) {
+    uint32_t time[100];
+    uint32_t p_avg = 0, c_avg = 0;
+    for (int i = 0; i < 100; i++) {
         for (size_t i = 0; i < 65536ULL; i++) {
             in[i] = i;
             out[i] = 0ULL;
@@ -136,7 +138,10 @@ int main(int argc, char *argv[])
         pthread_join(consumer_th, (void **) &recd);
     
         uint64_t end = get_time();
-        // time[i] = end - start;
+        time[i] = end - start;
+        
+        p_avg += r.q.p_times;
+        c_avg += r.q.c_times;
 
         // for(size_t i = 0ULL; i < r.messages_per_thread; i++)
         //     printf("%lu\n", out[i]);
@@ -147,19 +152,21 @@ int main(int argc, char *argv[])
         pthread_attr_destroy(&attr);
 
         queue_destroy(&r.q);
-    // }
+    }
     
     /*for(size_t i = 0; i < 65536; i++)
         printf("%ld\n", out[i]);*/
 
-    // qsort(time, 100U, sizeof(uint32_t), comp);
-    // long long avg = 0LL;
-    // for (int num = 16; num < 84; num++) {
-    //     avg += time[num];
-    // }
-    // avg /= 68;
-    // // printf("average time : %lldus\n", avg);
-    // printf("%lld\n", avg);
+    qsort(time, 100U, sizeof(uint32_t), comp);
+    long long avg = 0LL;
+    for (int num = 16; num < 84; num++) {
+        avg += time[num];
+    }
+    avg /= 68;
+    // printf("average time : %lldus\n", avg);
+    printf("%lld\n", avg);
+    printf("Average p : %u\n", p_avg/100);
+    printf("Average c : %u\n", c_avg/100);
 
     return 0;
 }

@@ -18,6 +18,7 @@ typedef struct {
     // synchronization primitives
     pthread_cond_t readable, writeable;
     pthread_mutex_t lock;
+    uint32_t p_times, c_times;
 } queue_t;
 
 #include <errno.h>
@@ -106,7 +107,7 @@ void queue_init(queue_t *q, size_t s)
 
     // Initialize remaining members
     q->size = real_mmap_size;
-    q->head = q->tail = 0;
+    q->head = q->tail = q->p_times = q->c_times = 0;
 }
 
 /** Destroy the blocking queue *q* */
@@ -140,8 +141,10 @@ void queue_put(queue_t *q, uint8_t **buffer, size_t size)
     pthread_mutex_lock(&q->lock);
 
     // Wait for space to become available
-    while ((q->size - (q->tail - q->head)) < (size + sizeof(size_t)))
+    while ((q->size - (q->tail - q->head)) < (size + sizeof(size_t))) {
+        q->p_times++;
         pthread_cond_wait(&q->writeable, &q->lock);
+    }
 
     // Write message
     memcpy(&q->buffer[q->tail], *buffer, size);
@@ -166,8 +169,10 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 
     // Wait for a message that we can successfully consume to reach the front of
     // the queue
-    while ((q->tail - q->head) == 0)
+    while ((q->tail - q->head) == 0) {
+        q->c_times++;
         pthread_cond_wait(&q->readable, &q->lock);
+    }
 
     // sleep(1);
     // Read message body
