@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
         uint64_t end = get_time();
         time[i] = end - start;
 
-        p_avg += r.q.p_times;
-        c_avg += r.q.c_times;
+        // p_avg += r.q.p_times;
+        // c_avg += r.q.c_times;
 
         // for(size_t i = 0ULL; i < r.messages_per_thread; i++)
         //     printf("%lu\n", out[i]);
