@@ -1,8 +1,8 @@
-set title "ring buffer speed (tranfer size = 65536bytes)"
+set title "ring buffer speed (transfer size = 65536bytes)"
 set xlabel "Size of ring buffer (x4096bytes)"
 set ylabel "time(usec)"
 set terminal png font " Times_New_Roman,12 "
-set output "Compare_algn_con_bs_all.png"
+set output "Compare_con_bs_all.png"
 set key left 
 
 plot \

@@ -24,8 +24,10 @@ gcc -o test_con_500 -pthread test_con_500.c
 #     #./test_dyn $i >> output_dyn;
 #     #./test $i >> output;
 #     #./test_msg $i >> output_msg_100;
-#     ./test_algn m$i b4096 >> output_algn;
-#     ./test_con m$i b4096 >> output_con;
+#     # ./test_algn m$i >> output_algn;
+#     # ./test_con m$i >> output_con;
+#     ./test_con_100 m$i b32768 >> output_b_con_100;
+#     ./test_con_500 m$i b32768 >> output_b_con_500;
 # done
 
 for i in {4096..49152..4096};
