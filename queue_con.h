@@ -18,6 +18,7 @@ typedef struct {
     // synchronization primitives
     pthread_cond_t readable, writeable;
     pthread_mutex_t lock;
+    size_t **consumer_ptr;
     // uint32_t p_times, c_times;
 } queue_t;
 
@@ -109,6 +110,9 @@ void queue_init(queue_t *q, size_t s)
     q->size = real_mmap_size;
     q->head = q->tail = 0;
     // q->head = q->tail = q->p_times = q->c_times = 0;
+    q->consumer_ptr = malloc(sizeof(size_t *));
+    if(!q->consumer_ptr)
+        fprintf(stderr, "couldn't allocate comsumer pointer\n");
 }
 
 /** Destroy the blocking queue *q* */

@@ -64,17 +64,17 @@ static void *consumer_loop(void *arg)
 {
     rbuf_t *r = (rbuf_t *) arg;
     size_t i;
-    size_t **consumer_ptr = malloc(sizeof(size_t *));
-    *consumer_ptr = out;
+    // size_t **consumer_ptr = malloc(sizeof(size_t *));
+    // *consumer_ptr = out;
     size_t full_get = (r->messages_per_thread) / SIZE_OF_MESSAGE;
     size_t remain_get = (r->messages_per_thread) % SIZE_OF_MESSAGE;
     for (i = 0; i < full_get; i++) {
         // printf("con %ld time\n", i);
-        queue_get(&r->q, (uint8_t **) consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
+        queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
     // printf("con %ld time\n", full_get);
     if(remain_get)
-        queue_get(&r->q, (uint8_t **) consumer_ptr, sizeof(size_t) * remain_get);
+        queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * remain_get);
     return (void *) (i * SIZE_OF_MESSAGE + remain_get);
 }
 
@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
     r.num_threads = NUM_THREADS;
     r.messages_per_thread = 65536U;
     size_t buffer_size = BUFFER_SIZE;
+    *r.q.consumer_ptr = out;
 
     /* In order to customize messages per thread and the buffer size, 
      * we use argv to recieve arguments. For specific number of messages, 
