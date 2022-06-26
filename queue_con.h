@@ -19,7 +19,7 @@ typedef struct {
     pthread_cond_t readable, writeable;
     pthread_mutex_t lock;
     size_t **consumer_ptr;
-    // uint32_t p_times, c_times;
+    uint32_t p_times, c_times;
 } queue_t;
 
 #include <errno.h>
@@ -41,8 +41,6 @@ static inline void queue_error(const char *fmt, ...)
     fprintf(stderr, "queue error: ");
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
-    va_end(args);
-    abort();
 }
 static inline void queue_error_errno(const char *fmt, ...)
 {
@@ -118,9 +116,6 @@ void queue_init(queue_t *q, size_t s)
 /** Destroy the blocking queue *q* */
 void queue_destroy(queue_t *q)
 {
-    if (munmap(q->buffer + q->size, q->size) != 0)
-        queue_error_errno("Could not unmap buffer");
-
     if (munmap(q->buffer, q->size) != 0)
         queue_error_errno("Could not unmap buffer");
 

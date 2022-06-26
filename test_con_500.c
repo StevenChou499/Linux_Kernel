@@ -92,7 +92,6 @@ int main(int argc, char *argv[])
     r.num_threads = NUM_THREADS;
     r.messages_per_thread = 65536U;
     size_t buffer_size = BUFFER_SIZE;
-    *r.q.consumer_ptr = out;
 
     /* In order to customize messages per thread and the buffer size, 
      * we use argv to recieve arguments. For specific number of messages, 
