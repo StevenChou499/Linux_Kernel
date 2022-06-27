@@ -85,7 +85,7 @@ void queue_init(queue_t *q, size_t s, size_t m)
         queue_error_errno("Could not obtain anonymous file");
 
     // Set buffer size
-    if (ftruncate(q->fd, s) != 0)
+    if (ftruncate(q->fd, real_mmap_size) != 0)
         queue_error_errno("Could not set size of anonymous file");
 
     // Ask mmap for a good address
@@ -123,6 +123,9 @@ void queue_init(queue_t *q, size_t s, size_t m)
 /** Destroy the blocking queue *q* */
 void queue_destroy(queue_t *q)
 {
+    if (munmap(q->buffer + q->size, q->size) != 0)
+        queue_error_errno("Could not unmap buffer");
+
     if (munmap(q->buffer, q->size) != 0)
         queue_error_errno("Could not unmap buffer");
 
@@ -158,10 +161,12 @@ void queue_put(queue_t *q, uint8_t **buffer, size_t size)
     printf("queue_put for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
     memcpy(&q->buffer[q->tail], *buffer, size);
     // printf("%ld\n", (size_t) **(size_t **)buffer);
+    
 
     // Increment write index and buffer index
     q->tail += size;
     *buffer += size;
+    // printf("After queue_put for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
 
     pthread_cond_signal(&q->readable);
     pthread_mutex_unlock(&q->lock);
@@ -178,7 +183,7 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 
     // Wait for a message that we can successfully consume to reach the front of
     // the queue
-    while ((q->tail < q->head + size)) {
+    while ((q->tail == q->head)) {
         // q->c_times++;
         printf("consumer blocked...\n");
         pthread_cond_wait(&q->readable, &q->lock);
@@ -191,6 +196,7 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
     // Consume the message by incrementing the read pointer
     q->head += size;
     *buffer += size;
+    // printf("After queue_get for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
 
     // When read buffer moves into 2nd memory region, we can reset to the 1st
     // region
