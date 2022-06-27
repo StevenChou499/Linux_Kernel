@@ -50,6 +50,7 @@ static void *publisher_loop(void *arg)
     size_t full_put = (r->messages_per_thread * r->num_threads) / SIZE_OF_MESSAGE;
     size_t remain_put = (r->messages_per_thread * r->num_threads) % SIZE_OF_MESSAGE;
     // printf("full_put = %lu\n", full_put);
+    printf("full_put = %lu, remain_put = %lu\n", full_put, remain_put);
     for (i = 0; i < full_put; i++) {
         // printf("pub %ld time\n", i);
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
@@ -68,6 +69,7 @@ static void *consumer_loop(void *arg)
     // *consumer_ptr = out;
     size_t full_get = (r->messages_per_thread) / SIZE_OF_MESSAGE;
     size_t remain_get = (r->messages_per_thread) % SIZE_OF_MESSAGE;
+    printf("full_get = %lu, remain_get = %lu\n", full_get, remain_get);
     for (i = 0; i < full_get; i++) {
         // printf("con %ld time\n", i);
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
 
     rbuf_t r;
     r.num_threads = NUM_THREADS;
-    r.messages_per_thread = 65536U;
+    r.messages_per_thread = 65536U / NUM_THREADS;
     size_t buffer_size = BUFFER_SIZE;
 
     /* In order to customize messages per thread and the buffer size, 
@@ -116,10 +118,12 @@ int main(int argc, char *argv[])
             buffer_size = (uint64_t) atoi(argv[1] + 1);
     }
 
-        // printf("r.message_per_thread is %u\n", r.messages_per_thread);
-        // printf("buffer_size is %lu\n", buffer_size);
+    printf("r.message_per_thread is %u\n", r.messages_per_thread);
+    printf("buffer_size is %lu\n", buffer_size);
     
     queue_init(&r.q, buffer_size);
+
+    *(r.q.consumer_ptr) = out;
 
         // uint64_t start = get_time();
 

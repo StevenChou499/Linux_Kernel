@@ -116,6 +116,9 @@ void queue_init(queue_t *q, size_t s)
 /** Destroy the blocking queue *q* */
 void queue_destroy(queue_t *q)
 {
+    if (munmap(q->buffer + q->size, q->size) != 0)
+        queue_error_errno("Could not unmap buffer");
+
     if (munmap(q->buffer, q->size) != 0)
         queue_error_errno("Could not unmap buffer");
 
@@ -143,11 +146,12 @@ void queue_put(queue_t *q, uint8_t **buffer, size_t size)
     // Wait for space to become available
     while ((q->size - (q->tail - q->head)) < (size + sizeof(size_t))) {
         // q->p_times++;
-        // printf("publisher blocked...\n");
+        printf("publisher blocked...\n");
         pthread_cond_wait(&q->writeable, &q->lock);
     }
 
     // Write message
+    printf("queue_put for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
     memcpy(&q->buffer[q->tail], *buffer, size);
     // printf("%ld\n", (size_t) **(size_t **)buffer);
 
@@ -172,16 +176,20 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
     // the queue
     while ((q->tail - q->head) == 0) {
         // q->c_times++;
-        // printf("consumer blocked...\n");
+        printf("consumer blocked...\n");
         pthread_cond_wait(&q->readable, &q->lock);
     }
     
     // Read message body
+    printf("queue_get for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
+    // printf("%ld\n", *buffer);
     memcpy(*buffer, &q->buffer[q->head], size);
+    // printf("finish memcpy\n");
 
     // Consume the message by incrementing the read pointer
     q->head += size;
     *buffer += size;
+    // printf("After queue_get for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
 
     // When read buffer moves into 2nd memory region, we can reset to the 1st
     // region
