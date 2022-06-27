@@ -6,7 +6,7 @@
 #include "queue_mul.h"
 
 #define BUFFER_SIZE (getpagesize())
-#define NUM_THREADS (2)
+#define NUM_THREADS (8)
 #define MESSAGES_PER_THREAD (getpagesize() * 2)
 #define SIZE_OF_MESSAGE 500ULL
 
@@ -73,10 +73,10 @@ static void *publisher_loop(void *arg)
     printf("full_put = %lu, remain_put = %lu\n", full_put, remain_put);
     pthread_mutex_lock(&r->barrier);
     for (i = 0; i < full_put; i++) {
-        // printf("pub %ld time\n", i);
+        printf("pub %ld time\n", i);
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
-    // printf("pub %ld time\n", full_put);
+    printf("pub %ld time\n", full_put);
     // pthread_mutex_unlock(&r->barrier);
     if(remain_put)
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * remain_put);
@@ -94,10 +94,10 @@ static void *consumer_loop(void *arg)
     size_t remain_get = (r->messages_per_thread) % SIZE_OF_MESSAGE;
     printf("full_get = %lu, remain_get = %lu\n", full_get, remain_get);
     for (i = 0; i < full_get; i++) {
-        // printf("con %ld time\n", i);
+        printf("con %ld time\n", i);
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
-    // printf("con %ld time\n", full_get);
+    printf("con %ld time\n", full_get);
     pthread_mutex_lock(&r->barrier);
     if(remain_get)
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * remain_get);
