@@ -20,6 +20,9 @@ typedef struct {
     pthread_mutex_t lock;
     size_t **consumer_ptr;
     // uint32_t p_times, c_times;
+
+    // backing message size
+    size_t msg_size;
 } queue_t;
 
 #include <errno.h>
@@ -114,6 +117,7 @@ void queue_init(queue_t *q, size_t s, size_t m)
     // Initialize remaining members
     q->size = real_mmap_size;
     q->head = q->tail = 0;
+    q->msg_size = m;
     // q->head = q->tail = q->p_times = q->c_times = 0;
     q->consumer_ptr = malloc(sizeof(size_t *));
     if(!q->consumer_ptr)
@@ -183,7 +187,7 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 
     // Wait for a message that we can successfully consume to reach the front of
     // the queue
-    while ((q->tail == q->head)) {
+    while ((q->tail < q->head + size)) {
         // q->c_times++;
         printf("consumer blocked...\n");
         pthread_cond_wait(&q->readable, &q->lock);
