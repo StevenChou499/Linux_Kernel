@@ -183,6 +183,7 @@ void queue_put(queue_t *q, uint8_t **buffer, size_t size)
  */
 size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
 {
+    printf("start queue_get\n");
     pthread_mutex_lock(&q->lock);
 
     // Wait for a message that we can successfully consume to reach the front of
@@ -192,7 +193,7 @@ size_t queue_get(queue_t *q, uint8_t **buffer, size_t size)
         printf("consumer blocked...\n");
         pthread_cond_wait(&q->readable, &q->lock);
     }
-    
+    printf("start memcpy\n\n");
     // Read message body
     printf("queue_get for size = %lu, q->head = %lu, q->tail = %lu\n", size, q->head, q->tail);
     memcpy(*buffer, &q->buffer[q->head], size);

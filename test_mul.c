@@ -44,7 +44,7 @@ uint64_t get_time()
 
 void rbuf_init(rbuf_t *r)
 {
-    if (pthread_barrier_init(&r->barrier, NULL, NUM_THREADS + 1) != 0)
+    if (pthread_barrier_init(&r->barrier, NULL, (NUM_THREADS + 1)) != 0)
         fprintf(stderr, "Could not initialize barrier\n");
     r->num_threads = NUM_THREADS;
     r->messages_per_thread = 65536U / NUM_THREADS;
@@ -75,7 +75,7 @@ static void *publisher_loop(void *arg)
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
     pthread_barrier_wait(&r->barrier);
-    printf("\nrelease barrier...\n");
+    printf("\nrelease barrier from publisher...\n\n");
     printf("full_put = %lu, barrier_put = %lu, remain_put = %lu\n", full_put, barrier_put, remain_put);
     for (i = 0; i < barrier_put; i++) {
         printf("pub %ld time\n", i + full_put + 1);
@@ -87,6 +87,7 @@ static void *publisher_loop(void *arg)
     if(remain_put)
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * remain_put);
     // pthread_mutex_unlock(&r->barrier);
+    printf("publisher finished\n");
     return (void *) (i * SIZE_OF_MESSAGE + remain_put);
 }
 
@@ -103,12 +104,15 @@ static void *consumer_loop(void *arg)
         printf("con %ld time\n", i + 1);
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
-    printf("con %ld time\n", full_get + 1);
     pthread_barrier_wait(&r->barrier);
+    printf("\nrelease barrier from consumer...\n\n");
+    printf("con %ld time\n", full_get + 1);
     printf("full_get = %lu, remain_get = %lu\n", full_get, remain_get);
     if(remain_get)
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * remain_get);
- 
+
+    printf("consumer finished\n");
+
     return (void *) (i * SIZE_OF_MESSAGE + remain_get);
 }
 
@@ -196,13 +200,14 @@ int main(int argc, char *argv[])
     pthread_attr_destroy(&attr);
 
     queue_destroy(&r.q);
+    rbuf_destroy(&r);
     // }
     
     // for(size_t i = 0; i < r.messages_per_thread; i++)
     //     printf("%ld\n", out[i]);
 
-    for(size_t i = 0; i < 65536U; i++)
-        printf("%ld\n", out[i]);
+    // for(size_t i = 0; i < 65536U; i++)
+    //     printf("%ld\n", out[i]);
 
     // qsort(time, 100U, sizeof(uint32_t), comp);
     // long long avg = 0LL;
