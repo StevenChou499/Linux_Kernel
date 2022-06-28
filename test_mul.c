@@ -6,7 +6,7 @@
 #include "queue_mul.h"
 
 #define BUFFER_SIZE (getpagesize())
-#define NUM_THREADS (4)
+#define NUM_THREADS (2)
 #define MESSAGES_PER_THREAD (getpagesize() * 2)
 #define SIZE_OF_MESSAGE 500ULL
 
@@ -25,7 +25,7 @@ typedef struct {
     queue_t q;
     uint32_t messages_per_thread;
     uint32_t num_threads;
-    pthread_mutex_t barrier;
+    pthread_barrier_t barrier;
 } rbuf_t;
 
 size_t in[65536];
@@ -44,16 +44,16 @@ uint64_t get_time()
 
 void rbuf_init(rbuf_t *r)
 {
-    if (pthread_mutex_init(&r->barrier, NULL) != 0)
-        fprintf(stderr, "Could not initialize mutex lock");
+    if (pthread_barrier_init(&r->barrier, NULL, NUM_THREADS + 1) != 0)
+        fprintf(stderr, "Could not initialize barrier\n");
     r->num_threads = NUM_THREADS;
     r->messages_per_thread = 65536U / NUM_THREADS;
 }
 
 void rbuf_destroy(rbuf_t *r)
 {
-    if (pthread_mutex_destroy(&r->barrier) != 0)
-        fprintf(stderr, "Could not destroy mutex lock");
+    if (pthread_barrier_destroy(&r->barrier) != 0)
+        fprintf(stderr, "Could not destroy barrier\n");
 }
 
 static void *publisher_loop(void *arg)
@@ -68,13 +68,15 @@ static void *publisher_loop(void *arg)
     full_put -= barrier_put;
     size_t remain_put = (r->messages_per_thread * r->num_threads) % SIZE_OF_MESSAGE;
     // printf("full_put = %lu\n", full_put);
-    printf("full_put = %lu, remain_put = %lu\n", full_put, remain_put);
-    pthread_mutex_lock(&r->barrier);
+    printf("full_put = %lu, barrier_put = %lu, remain_put = %lu\n", full_put, barrier_put, remain_put);
+
     for (i = 0; i < full_put; i++) {
         printf("pub %ld time\n", i + 1);
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
-    pthread_mutex_unlock(&r->barrier);
+    pthread_barrier_wait(&r->barrier);
+    printf("\nrelease barrier...\n");
+    printf("full_put = %lu, barrier_put = %lu, remain_put = %lu\n", full_put, barrier_put, remain_put);
     for (i = 0; i < barrier_put; i++) {
         printf("pub %ld time\n", i + full_put + 1);
         queue_put(&r->q, (uint8_t **) publisher_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
@@ -102,10 +104,11 @@ static void *consumer_loop(void *arg)
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * SIZE_OF_MESSAGE);
     }
     printf("con %ld time\n", full_get + 1);
-    pthread_mutex_lock(&r->barrier);
+    pthread_barrier_wait(&r->barrier);
+    printf("full_get = %lu, remain_get = %lu\n", full_get, remain_get);
     if(remain_get)
         queue_get(&r->q, (uint8_t **) r->q.consumer_ptr, sizeof(size_t) * remain_get);
-    pthread_mutex_unlock(&r->barrier);    
+ 
     return (void *) (i * SIZE_OF_MESSAGE + remain_get);
 }
 
